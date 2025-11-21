@@ -25,7 +25,7 @@ MAX_RECONNECT_DELAY = 60
 FLAG_EXIT = False
 
 
-def on_connect(client, userdata, flags, rc):
+def on_connect(client, userdata, flags, rc, properties):
     if rc == 0 and client.is_connected():
         print("Connected to MQTT Broker!")
         client.subscribe(TOPIC)
