@@ -12,7 +12,7 @@ disconnect_address = "00:23:31:75:10:A4"
 
 BROKER = "192.168.1.186"
 PORT = 1883
-TOPIC = "wiifitboard/mqtt"
+TOPIC = "homeassistant/wiifitboard"
 CLIENT_ID = "wiifitboardscale"
 USERNAME = "dmitry"
 PASSWORD = "1234"
