@@ -40,15 +40,20 @@ disconnect_address = "00:23:31:75:10:A4"
 
 def get_board():
     devices = [evdev.InputDevice(path) for path in evdev.list_devices()]
-    device_path = (
-        device.path
-        for device in devices
-        if device.name == "Nintendo Wii Remote Balance Board"
-    ).__next__()
-    balance_board: evdev.InputDevice = evdev.InputDevice(
-        device_path,
-    )
-    return balance_board
+    try:
+        device_path = (
+            device.path
+            for device in devices
+            if device.name == "Nintendo Wii Remote Balance Board"
+        ).__next__()
+        balance_board: evdev.InputDevice = evdev.InputDevice(
+            device_path,
+        )
+        return balance_board
+    except StopIteration:
+        pass
+
+    return False
 
 
 def measure_weight():
