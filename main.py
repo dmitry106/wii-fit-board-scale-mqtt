@@ -1,7 +1,10 @@
+import subprocess
 import time
 
 import evdev
 from bbev import calculate_weight_with_statistics
+
+disconnect_address = "00:23:31:75:10:A4"
 
 # devices = [evdev.InputDevice(path) for path in evdev.list_devices()]
 # device_path = (
@@ -59,12 +62,14 @@ def measure_weight():
             if board:
                 break
             time.sleep(0.5)
-
+        print("is board none?")
         if board is not None:
             weight_data = calculate_weight_with_statistics(
                 board,
                 100,
             )
+
+            print("is weight data none?")
             if weight_data is not None:
                 trimmed_stats = weight_data.trimmed_statistics(30)
                 print(f"""
@@ -73,10 +78,19 @@ def measure_weight():
                     Mean: {trimmed_stats["mean"]}
                     Stdev: {trimmed_stats["stdev"]}
                 """)
+
             else:
                 print("weight data is none")
+            subprocess.run(
+                ["/usr/bin/env", "bluetoothctl", "disconnect", disconnect_address],
+                capture_output=True,
+            )
         else:
             print("board is none")
+            subprocess.run(
+                ["/usr/bin/env", "bluetoothctl", "disconnect", disconnect_address],
+                capture_output=True,
+            )
 
 
 if __name__ == "__main__":
