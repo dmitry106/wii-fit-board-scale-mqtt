@@ -12,7 +12,8 @@ disconnect_address = "00:23:31:75:10:A4"
 
 BROKER = "192.168.1.186"
 PORT = 1883
-TOPIC = "homeassistant/wiifitboard"
+CONFIGTOPIC = "homeassistant/sensor/wiifitboard/config"
+DATATOPIC = "stat/mqttdiscovery/sensor/weightscale"
 CLIENT_ID = "wiifitboardscale"
 USERNAME = "dmitry"
 PASSWORD = "1234"
@@ -28,7 +29,7 @@ FLAG_EXIT = False
 def on_connect(client, userdata, flags, rc, properties):
     if rc == 0 and client.is_connected():
         print("Connected to MQTT Broker!")
-        client.subscribe(TOPIC)
+        client.subscribe(CONFIGTOPIC)
     else:
         print(f"Failed to connect, return code {rc}")
 
@@ -87,8 +88,45 @@ def get_board():
     return False
 
 
-def publish(client, stats):
-    msg_count = 0
+def publishdiscovery(client):
+    msg_dict_discovery = {
+        "dev": {
+            "ids": "dmi1234",
+            "name": "MQTT Wii Fit Board",
+        },
+        "origin": {
+            "name": "dmiwiiscale",
+        },
+        "cmps": {
+            "weight01": {
+                "p": "sensor",
+                "unit_of_measurement": "g",
+                "value_template": "{{ value_json.mean}}",
+                "unique_id": "wiiweight01",
+            },
+            "weight02": {
+                "p": "sensor",
+                "unit_of_measurement": "g",
+                "value_template": "{{ value_json.median}}",
+                "unique_id": "wiiweight02",
+            },
+        },
+        "state_topic": "stat/mqttdiscovery/sensor/weightscale",
+        "qos": 2,
+    }
+
+    msg = json.dumps(msg_dict_discovery)
+    if not client.is_connected():
+        logging.error("publish: MQTT client is not connected!")
+    result = client.publish(CONFIGTOPIC, msg)
+    status = result[0]
+    if status == 0:
+        print(f"Send `{msg}` to topic `{CONFIGTOPIC}`")
+    else:
+        print(f"Failed to send message to topic {CONFIGTOPIC}")
+
+
+def publish(client, stats, msg_count):
     msg_dict = {
         "msgcount": msg_count,
         "median": stats["median"],
@@ -98,30 +136,29 @@ def publish(client, stats):
     msg = json.dumps(msg_dict)
     if not client.is_connected():
         logging.error("publish: MQTT client is not connected!")
-    result = client.publish(TOPIC, msg)
+    result = client.publish(DATATOPIC, msg)
     # result: [0, 1]
     status = result[0]
     if status == 0:
-        print(f"Send `{msg}` to topic `{TOPIC}`")
+        print(f"Send `{msg}` to topic `{DATATOPIC}`")
     else:
-        print(f"Failed to send message to topic {TOPIC}")
+        print(f"Failed to send message to topic {DATATOPIC}")
 
 
 def measure_weight():
+    msg_count = 0
     while True:
         connected = False
         board = None
 
         client = connect_mqtt()
         client.loop_start()
-        time.sleep(1)
 
         while not connected:
             print("\a Waiting for Balance board...")
             board = get_board()
             if board:
                 break
-            time.sleep(0.5)
         print("is board none?")
         if board is not None:
             weight_data = calculate_weight_with_statistics(
@@ -138,7 +175,9 @@ def measure_weight():
                     Mean: {trimmed_stats["mean"]}
                     Stdev: {trimmed_stats["stdev"]}
                 """)
-                publish(client, trimmed_stats)
+                publishdiscovery(client)
+                msg_count = msg_count + 1
+                publish(client, trimmed_stats, msg_count)
 
             else:
                 print("weight data is none")
