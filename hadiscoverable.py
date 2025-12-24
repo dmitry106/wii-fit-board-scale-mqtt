@@ -1,7 +1,10 @@
-import json
+# import json
 import logging
+
+# from systemd.journal import JournalHandler
 import subprocess
 import time
+import traceback
 
 import evdev
 import paho.mqtt.client as mqtt
@@ -10,7 +13,7 @@ from ha_mqtt_discoverable import Settings
 from ha_mqtt_discoverable.sensors import Sensor, SensorInfo
 from paho.mqtt.enums import CallbackAPIVersion
 
-disconnect_address = "00:23:31:75:10:A4"
+DISCONNECT_ADDRESS = "00:23:31:75:10:A4"
 
 BROKER = "192.168.1.186"
 PORT = 1883
@@ -25,7 +28,7 @@ RECONNECT_RATE = 2
 MAX_RECONNECT_COUNT = 12
 MAX_RECONNECT_DELAY = 60
 
-FLAG_EXIT = False
+# FLAG_EXIT = False
 
 
 def on_connect(client, userdata, flags, rc, properties):
@@ -54,8 +57,8 @@ def on_disconnect(client, userdata, rc):
         reconnect_delay = min(reconnect_delay, MAX_RECONNECT_DELAY)
         reconnect_count += 1
     logging.info("Reconnect failed after %s attempts. Exiting...", reconnect_count)
-    global FLAG_EXIT
-    FLAG_EXIT = True
+    # global FLAG_EXIT
+    # FLAG_EXIT = True
 
 
 def on_message(client, userdata, msg):
@@ -90,119 +93,70 @@ def get_board():
     return False
 
 
-def publishdiscovery(client):
-    msg_dict_discovery = {
-        "dev": {
-            "ids": "dmi1234",
-            "name": "MQTT Wii Fit Board",
-        },
-        "origin": {
-            "name": "dmiwiiscale",
-        },
-        "cmps": {
-            "weight01": {
-                "p": "sensor",
-                "unit_of_measurement": "g",
-                "value_template": "{{ value_json.mean}}",
-                "unique_id": "wiiweight01",
-            },
-            "weight02": {
-                "p": "sensor",
-                "unit_of_measurement": "g",
-                "value_template": "{{ value_json.median}}",
-                "unique_id": "wiiweight02",
-            },
-        },
-        "state_topic": "stat/mqttdiscovery/sensor/weightscale",
-        "qos": 2,
-    }
-
-    msg = json.dumps(msg_dict_discovery)
-    if not client.is_connected():
-        logging.error("publish: MQTT client is not connected!")
-    result = client.publish(CONFIGTOPIC, msg)
-    status = result[0]
-    if status == 0:
-        print(f"Send `{msg}` to topic `{CONFIGTOPIC}`")
-    else:
-        print(f"Failed to send message to topic {CONFIGTOPIC}")
-
-
-def publish(client, stats, msg_count):
-    msg_dict = {
-        "msgcount": msg_count,
-        "median": stats["median"],
-        "mean": stats["mean"],
-        "stdev": stats["stdev"],
-    }
-    msg = json.dumps(msg_dict)
-    if not client.is_connected():
-        logging.error("publish: MQTT client is not connected!")
-    result = client.publish(DATATOPIC, msg)
-    # result: [0, 1]
-    status = result[0]
-    if status == 0:
-        print(f"Send `{msg}` to topic `{DATATOPIC}`")
-    else:
-        print(f"Failed to send message to topic {DATATOPIC}")
-
-
 def measure_weight():
-    msg_count = 0
+    logging.basicConfig(
+        format="[%(levelname)s] %(asctime)s %(message)s", level=logging.INFO
+    )
+    logger = logging.getLogger()
+
     while True:
-        connected = False
-        board = None
+        try:
+            connected = False
+            board = None
 
-        client = connect_mqtt()
-        client.loop_start()
+            client = connect_mqtt()
+            client.loop_start()
 
-        mqtt_settings = Settings.MQTT(client=client)
+            mqtt_settings = Settings.MQTT(client=client)
 
-        sensor_info = SensorInfo(
-            name="wiifitboard",
-            device_class="weight",
-            unit_of_measurement="g",
-        )
-
-        settings = Settings(mqtt=mqtt_settings, entity=sensor_info)
-        mysensor = Sensor(settings)
-
-        while not connected:
-            print("\a Waiting for Balance board...")
-            board = get_board()
-            if board:
-                break
-        print("is board none?")
-        if board is not None:
-            weight_data = calculate_weight_with_statistics(
-                board,
-                100,
+            sensor_info = SensorInfo(
+                name="wiifitboard",
+                device_class="weight",
+                unit_of_measurement="g",
             )
 
-            print("is weight data none?")
-            if weight_data is not None:
-                trimmed_stats = weight_data.trimmed_statistics(30)
-                print(f"""
-                Trimmed Stats: (To get rid of outliers, like getting onto the board
-                    Median: {trimmed_stats["median"]}
-                    Mean: {trimmed_stats["mean"]}
-                    Stdev: {trimmed_stats["stdev"]}
-                """)
-                mysensor.set_state(trimmed_stats["mean"])
+            settings = Settings(mqtt=mqtt_settings, entity=sensor_info)
+            mysensor = Sensor(settings)
 
+            while not connected:
+                board = get_board()
+                if board:
+                    logger.info("get_board() successful")
+                    break
+            if board is not None:
+                weight_data = calculate_weight_with_statistics(
+                    board,
+                    100,
+                )
+                if weight_data is not None:
+                    trimmed_stats = weight_data.trimmed_statistics(30)
+                    # testing print() for before mqtt is working
+                    # print(f"""
+                    # Trimmed Stats: (To get rid of outliers, like getting onto the board
+                    #     Median: {trimmed_stats["median"]}
+                    #     Mean: {trimmed_stats["mean"]}
+                    #     Stdev: {trimmed_stats["stdev"]}
+                    # """)
+                    logger.info("sending data to mqtt")
+                    mysensor.set_state(trimmed_stats["mean"])
+
+                else:
+                    logger.warning("weight data is none, try weighing longer.")
+                    print("weight data is none")
+                subprocess.run(
+                    ["/usr/bin/env", "bluetoothctl", "disconnect", DISCONNECT_ADDRESS],
+                    capture_output=True,
+                )
             else:
-                print("weight data is none")
-            subprocess.run(
-                ["/usr/bin/env", "bluetoothctl", "disconnect", disconnect_address],
-                capture_output=True,
-            )
-        else:
-            print("board is none")
-            subprocess.run(
-                ["/usr/bin/env", "bluetoothctl", "disconnect", disconnect_address],
-                capture_output=True,
-            )
-        client.loop_stop()
+                logger.info("board is none, turning off board")
+                subprocess.run(
+                    ["/usr/bin/env", "bluetoothctl", "disconnect", DISCONNECT_ADDRESS],
+                    capture_output=True,
+                )
+            client.loop_stop()
+        except Exception as e:
+            logger.error(e)
+            logger.error(traceback.format_exc())
 
 
 if __name__ == "__main__":
