@@ -39,8 +39,8 @@ def on_connect(client, userdata, flags, rc, properties):
         print(f"Failed to connect, return code {rc}")
 
 
-def on_disconnect(client, userdata, rc):
-    logging.info("Disconnected with result code: %s", rc)
+def on_disconnect(client, userdata, flags, reason_code, properties):
+    logging.info("Disconnected with result code: %s", reason_code)
     reconnect_count, reconnect_delay = 0, FIRST_RECONNECT_DELAY
     while reconnect_count < MAX_RECONNECT_COUNT:
         logging.info("Reconnecting in %d seconds...", reconnect_delay)
