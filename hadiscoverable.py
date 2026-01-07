@@ -78,11 +78,16 @@ def connect_mqtt():
 def get_board():
     devices = [evdev.InputDevice(path) for path in evdev.list_devices()]
     try:
-        device_path = (
-            device.path
-            for device in devices
-            if device.name == "Nintendo Wii Remote Balance Board"
-        ).__next__()
+        # device_path = (
+        #     device.path
+        #     for device in devices
+        #     if device.name == "Nintendo Wii Remote Balance Board"
+        # ).__next__()
+        device_path = ""
+        for device in devices:
+            if device.name == "Nintendo Wii Remote Balance Board":
+                device_path = device.path
+
         balance_board: evdev.InputDevice = evdev.InputDevice(
             device_path,
         )
