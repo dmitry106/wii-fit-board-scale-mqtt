@@ -87,11 +87,15 @@ def get_board():
         for device in devices:
             if device.name == "Nintendo Wii Remote Balance Board":
                 device_path = device.path
+                balance_board: evdev.InputDevice = evdev.InputDevice(
+                    device_path,
+                )
+                return balance_board
 
-        balance_board: evdev.InputDevice = evdev.InputDevice(
-            device_path,
-        )
-        return balance_board
+        # balance_board: evdev.InputDevice = evdev.InputDevice(
+        #     device_path,
+        # )
+        # return balance_board
     except StopIteration:
         pass
 
