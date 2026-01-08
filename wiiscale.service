@@ -7,8 +7,8 @@ WantedBy=multi-user.target
 
 [Service]
 Type=simple
-ExecStart=/home/wiiscale/hadiscoverablewiifitboard
-WorkingDirectory=/home/wiiscale
+ExecStart=/home/dmitry/wiiscale/hadiscoverablewiifitboard
+WorkingDirectory=/home/dmitry/wiiscale
 Restart=always
 RestartSec=5
 StandardOutput=syslog
