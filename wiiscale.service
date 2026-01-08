@@ -2,7 +2,7 @@
 Description=Wii fit board monitoring service that transmits data to home assistant
 After=network.target
 
-Install]
+[Install]
 WantedBy=multi-user.target
 
 [Service]
