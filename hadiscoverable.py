@@ -148,7 +148,7 @@ def measure_weight():
                     #     Stdev: {trimmed_stats["stdev"]}
                     # """)
                     logger.info("sending data to mqtt")
-                    mysensor.set_state(trimmed_stats["mean"])
+                    mysensor.set_state(int(trimmed_stats["mean"])*10)
 
                 else:
                     logger.warning("weight data is none, try weighing longer.")
