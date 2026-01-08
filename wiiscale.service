@@ -11,6 +11,3 @@ ExecStart=/home/dmitry/wiiscale/hadiscoverablewiifitboard
 WorkingDirectory=/home/dmitry/wiiscale
 Restart=always
 RestartSec=5
-StandardOutput=syslog
-StandardError=syslog
-SyslogIdentifier=%n
