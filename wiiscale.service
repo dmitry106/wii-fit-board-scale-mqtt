@@ -1,0 +1,16 @@
+[Unit]
+Description=Wii fit board monitoring service that transmits data to home assistant
+After=network.target
+
+Install]
+WantedBy=multi-user.target
+
+[Service]
+Type=simple
+ExecStart=/home/wiiscale/hadiscoverablewiifitboard
+WorkingDirectory=/home/wiiscale
+Restart=always
+RestartSec=5
+StandardOutput=syslog
+StandardError=syslog
+SyslogIdentifier=%n
