@@ -120,7 +120,7 @@ def measure_weight():
 
             sensor_info = SensorInfo(
                 name="wiifitboard",
-                unique_id="00:23:31:75:10:A4",
+                unique_id="0324923842",
                 device_class="weight",
                 unit_of_measurement="g",
             )
